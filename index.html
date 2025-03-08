@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <link rel="icon" href="https://cdn.glitch.global/3f6b2c4e-5a7d-4f9c-8b0e-3a1d6f2b5c7e/favicon.ico?v=1689056461536">
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+        }
+
+        #messages {
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding: 5px;
+            width: 100%;
+            height: calc(100% - 50px);
+            background: #000;
+            overflow-y: auto;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        #sendMsg {
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            height: 50px;
+            background: #000;
+        }
+
+        #msgTxt {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: calc(100% - 100px);
+            height: 100%;
+            padding-left: 10px;
+            box-sizing: border-box;
+            border-radius: 25px;
+            padding: 20px;
+        }
+
+        #msgBtn {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 100px;
+            height: 100%;
+            background: #3900c8;
+            color:#fff;
+            border: none;
+            border-radius: 25px;
+        }
+
+        #msgBtn:hover {
+            background: #4403e7;
+            cursor: pointer;
+        }
+        #msgBtn:active {
+            background: #3900c8;
+        }
+
+        #dltMsg {
+            margin: 5px;
+            width: 20px;
+            height: 20px;
+            background: #f00;
+            color: #fff;
+            border-radius: 50%;
+            border: none;
+        }
+
+        .outer {
+            width: 100%;
+            margin-top: 10px;
+            display: flex;
+            border-radius: 25px;
+        }
+
+        #inner {
+            padding: 20px;
+            box-sizing: border-box;
+            border-radius: 40px;
+        }
+
+        .me {
+            background: #8800FF;
+            color: #fff;
+        }
+
+        .notMe {
+            background: #FFF;
+            color: #000;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="messages"></div>
+
+    <div id="sendMsg">
+        <input type="text" id="msgTxt" placeholder="Message goes here" onkeyup="if(event.keyCode==13) module.sendMsg()">
+        <input type="submit" id="msgBtn" value="Send" onclick="module.sendMsg()">
+    </div>
+
+    <script>
+        module = {};
+    </script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getDatabase, ref, set, remove, onChildAdded, onChildRemoved } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBMfemNKW2MlBCa2F8KdEE4EqTCRecpvEw",
+            authDomain: "chat-459b6.firebaseapp.com",
+            databaseURL: "https://chat-459b6-default-rtdb.firebaseio.com",
+            projectId: "chat-459b6",
+            storageBucket: "chat-459b6.firebasestorage.app",
+            messagingSenderId: "199065887797",
+            appId: "1:199065887797:web:f0f4916aeb926c5fd87d7c",
+            measurementId: "G-V8Q10D5KWL"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // variables
+        var msgTxt = document.getElementById('msgTxt');
+        var sender;
+        if (sessionStorage.getItem('sender')) {
+            sender = sessionStorage.getItem('sender');
+        } else {
+            sender = prompt('PLEASE ENTER YOUR NAME');
+            sessionStorage.setItem('sender', sender);
+        }
+        
+        const cyrb53 = (str, seed = 0) => {
+            let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+            for(let i = 0, ch; i < str.length; i++) {
+                ch = str.charCodeAt(i);
+                h1 = Math.imul(h1 ^ ch, 2654435761);
+                h2 = Math.imul(h2 ^ ch, 1597334677);
+            }
+            h1  = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
+            h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+            h2  = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
+            h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+        
+            return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+        };
+
+        if (cyrb53(prompt('Password')) == 5973005341162343) {
+            alert('welcome');
+        } else {
+            document.location.href = 'https://shattereddisk.github.io/rickroll/';
+        }
+
+        module.sendMsg = function sendMsg() {
+            var msg = msgTxt.value;
+            var timestamp = new Date().getTime();
+            set(ref(db, "messages/" + timestamp), {
+                msg: msg,
+                sender: sender
+            })
+            msgTxt.value = "";
+        }
+
+        onChildAdded(ref(db, "messages"), (data) => {
+            if (data.val().sender == sender) {
+                messages.innerHTML += "<div style=justify-content:end class=outer id=" + data.key + "><div id=inner class=me>You: " + data.val().msg + "<button id=dltMsg onclick=module.dltMsg(" + data.key + ")>X</button></div></div>";
+            } else {
+                messages.innerHTML += "<div class=outer id=" + data.key + "><div id=inner class=notMe>" + data.val().sender + ": " + data.val().msg + "</div></div>";
+            }
+            document.getElementsByClassName("outer")[document.getElementsByClassName("outer").length - 1].scrollIntoView()
+        })
+
+        module.dltMsg = function dltMsg(key) {
+            remove(ref(db, "messages/" + key));
+        }
+
+        onChildRemoved(ref(db, "messages"), (data) => {
+            var msgBox = document.getElementById(data.key);
+            messages.removeChild(msgBox);
+        })
+    </script>
+</body>
+
+</html>
